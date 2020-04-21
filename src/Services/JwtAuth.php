@@ -1,0 +1,93 @@
+<?php
+
+namespace App\Services;
+
+use Firebase\JWT\JWT;
+use App\Entity\User;
+
+class JwtAuth
+{
+    public $manager;
+    public $key;
+
+    public function __construct($manager)
+    {
+        $this->manager = $manager;
+        // key generada por nosostros al azar
+        $this->key = 'sdldsj234lknslkn2lkwleknl2342lnwlk34n2lknrfwnk';
+    }
+
+    public function sigIn($email, $password, $gettoken = null)
+    {
+        // comprobar si el usuario existe
+        $user = $this->manager->getRepository(User::class)->findOneBy([
+        'email' => $email,
+        'password' => $password,
+      ]);
+
+        $signIn = false;
+        
+        if (is_object($user)) {
+            $signIn = true;
+            // return 'hay usuario';
+        }
+
+        // $signIn = (is_object($user)) ? true : false;
+
+        // si existe, generar el token de jwt
+        if ($signIn) {
+            $token = [
+            'sub' => $user->getId(),
+            'name' => $user->getName(),
+            'surname' => $user->getSurname(),
+            'email' => $user->getEmail(),
+            'nick' => $user->getNick(),
+            'role' => $user->getRole(),
+            'iat' => time(),
+            'exp' => time() + (7 * 24 * 60 * 60),
+          ];
+            // comprobar el flag gettoken, condición
+            $jwt = JWT::encode($token, $this->key, 'HS256');
+
+            if (!empty($gettoken)) {
+                $data = $jwt;
+            } else {
+                $decoded = JWT::decode($jwt, $this->key, ['HS256']);
+                $data = $decoded;
+            }
+        } else {
+            $data = [
+            'status' => 'error',
+            'message' => 'El usuario o la contraseña son incorrectos',
+          ];
+        }
+        // devolver datos
+
+        return $data;
+    }
+
+    public function checkToken($jwt, $identity = false)
+    {
+        $auth = false;
+
+        try {
+            $decoded = JWT::decode($jwt, $this->key, ['HS256']);
+        } catch (\UnexpectedValueException $e) {
+            $auth = false;
+        } catch (\DomainException $e) {
+            $auth = false;
+        }
+
+        if (isset($decoded) && !empty($decoded) && is_object($decoded) && isset($decoded->sub)) {
+            $auth = true;
+        } else {
+            $auth = false;
+        }
+
+        if ($identity != false) {
+            return $decoded;
+        } else {
+            return $auth;
+        }
+    }
+}
