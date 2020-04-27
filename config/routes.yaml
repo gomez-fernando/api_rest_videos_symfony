@@ -17,6 +17,9 @@ login:
   controller: App\Controller\UserController::login
   methods: [POST]
 
+logout:
+  path: /logout
+
 user_edit:
   path: /user/edit
   controller: App\Controller\UserController::edit
